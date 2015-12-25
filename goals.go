@@ -2,6 +2,7 @@ package goals
 
 import (
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -29,6 +30,7 @@ func init() {
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/fitbit/auth", redirectToFitbitAuthHandler)
 	http.HandleFunc("/fitbit/callback", fitbitAuthCallbackHandler)
+	http.HandleFunc("/admin/settings", settingsHandler)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -77,4 +79,33 @@ func fitbitAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(res.Body)
 
 	fmt.Fprintf(w, "%s", body)
+}
+
+const settingsForm = `
+<html>
+	<body>
+		<form action="/admin/settings" method="post">
+			<div><input value="{{.FitbitClientID}}" name="fitbit_client_id" placeholder="Fitbit Client ID"></div>
+			<div><input value="{{.FitbitClientSecret}}" name="fitbit_client_secret" placeholder="Fitbit Client Secret"></div>
+			<div><input type="submit" value="Update"></div>
+		</form>
+	</body>
+</html>
+`
+
+var settingsFormTemplate = template.Must(template.New("settings").Parse(settingsForm))
+
+// Settings stores the global Application settings
+type Settings struct {
+	FitbitClientID     string
+	FitbitClientSecret string
+}
+
+func settingsHandler(w http.ResponseWriter, r *http.Request) {
+	fibitClientID := "asd"
+	fitbitClientSecret := "asd secret"
+
+	data := &Settings{FitbitClientID: fibitClientID, FitbitClientSecret: fitbitClientSecret}
+
+	settingsFormTemplate.Execute(w, data)
 }
