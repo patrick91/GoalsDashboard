@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"google.golang.org/appengine"
+	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
 )
 
@@ -51,6 +52,20 @@ func FitbitAuthHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
+func storeToken(ctx context.Context, token *oauth2.Token) error {
+	key := datastore.NewKey(ctx, "Tokens", "fitbit", 0, nil)
+
+	_, err := datastore.Put(ctx, key, token)
+
+	if err != nil {
+		log.Errorf(ctx, "%v", err)
+
+		return err
+	}
+
+	return nil
+}
+
 // FitbitAuthCallbackHandler stores the token received from FitBit
 func FitbitAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
@@ -71,13 +86,11 @@ func FitbitAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// authorized and authenticated by the retrieved token.
 	tok, err := fitbitConf.Exchange(ctx, code)
 
-	log.Infof(ctx, "%v", tok)
-
 	if err != nil {
 		log.Errorf(ctx, "%v", err)
 	}
 
-	// TODO: store the token
+	storeToken(ctx, tok)
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
