@@ -10,6 +10,7 @@ import (
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
 
+	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 )
 
@@ -102,6 +103,14 @@ type Settings struct {
 	FitbitClientSecret string
 }
 
+func getSettings(ctx context.Context, data *Settings) error {
+	key := datastore.NewKey(ctx, "Settings", "main", 0, nil)
+
+	err := datastore.Get(ctx, key, data)
+
+	return err
+}
+
 func settingsHandler(w http.ResponseWriter, r *http.Request) {
 	var data Settings
 
@@ -126,7 +135,7 @@ func settingsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		err := datastore.Get(ctx, key, &data)
+		err := getSettings(ctx, &data)
 
 		if err != nil {
 
