@@ -9,6 +9,7 @@ func init() {
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/fitbit/auth", FitbitAuthHandler)
 	http.HandleFunc("/fitbit/callback", FitbitAuthCallbackHandler)
+	http.HandleFunc("/fitbit/profile", GetProfile)
 	http.HandleFunc("/admin/settings", SettingsHandler)
 }
 

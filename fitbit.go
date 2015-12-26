@@ -2,6 +2,7 @@ package goals
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"golang.org/x/net/context"
@@ -66,6 +67,14 @@ func storeToken(ctx context.Context, token *oauth2.Token) error {
 	return nil
 }
 
+func getToken(ctx context.Context, data *oauth2.Token) error {
+	key := datastore.NewKey(ctx, "Tokens", "fitbit", 0, nil)
+
+	err := datastore.Get(ctx, key, data)
+
+	return err
+}
+
 // FitbitAuthCallbackHandler stores the token received from FitBit
 func FitbitAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
@@ -93,4 +102,42 @@ func FitbitAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	storeToken(ctx, tok)
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
+
+func GetProfile(w http.ResponseWriter, r *http.Request) {
+	var token oauth2.Token
+	ctx := appengine.NewContext(r)
+
+	fitbitConf, err := getFitbitConf(ctx)
+
+	if err != nil {
+		fmt.Fprint(w, "Remember to initialise your settings")
+
+		return
+	}
+
+	err = getToken(ctx, &token)
+
+	if err != nil {
+		fmt.Fprint(w, "Remember to authenticate with fitbit")
+
+		return
+	}
+
+	// TODO: the token is usually updated automatically,
+	// so we need to store the updated one somehow
+	client := fitbitConf.Client(ctx, &token)
+
+	url := "https://api.fitbit.com/1/user/-/profile.json"
+
+	res, err := client.Get(url)
+
+	if err != nil {
+		log.Errorf(ctx, "%v", err)
+	}
+
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+
+	fmt.Fprintf(w, "%s", body)
 }
