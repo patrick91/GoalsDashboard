@@ -14,10 +14,18 @@ import (
 	"golang.org/x/oauth2"
 )
 
-func getFitbitConf() *oauth2.Config {
+func getFitbitConf(ctx context.Context) (*oauth2.Config, error) {
+	var data Settings
+
+	err := getSettings(ctx, &data)
+
+	if err != nil {
+		return nil, err
+	}
+
 	var fitbitConf = &oauth2.Config{
-		ClientID:     "FILLME",
-		ClientSecret: "FILLME",
+		ClientID:     data.FitbitClientID,
+		ClientSecret: data.FitbitClientSecret,
 		Scopes:       []string{"activity", "weight", "profile"},
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  "https://www.fitbit.com/oauth2/authorize",
@@ -25,7 +33,7 @@ func getFitbitConf() *oauth2.Config {
 		},
 	}
 
-	return fitbitConf
+	return fitbitConf, nil
 }
 
 func init() {
@@ -40,7 +48,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func redirectToFitbitAuthHandler(w http.ResponseWriter, r *http.Request) {
-	fitbitConf := getFitbitConf()
+	ctx := appengine.NewContext(r)
+
+	fitbitConf, err := getFitbitConf(ctx)
+
+	if err != nil {
+		fmt.Fprint(w, "Remember to initialise your settings")
+
+		return
+	}
+
 	// Redirect user to consent page to ask for permission
 	// for the scopes specified above.
 	url := fitbitConf.AuthCodeURL("state", oauth2.AccessTypeOffline)
@@ -49,9 +66,16 @@ func redirectToFitbitAuthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func fitbitAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
-	fitbitConf := getFitbitConf()
-
 	ctx := appengine.NewContext(r)
+
+	fitbitConf, err := getFitbitConf(ctx)
+
+	if err != nil {
+		fmt.Fprint(w, "Remember to initialise your settings")
+
+		return
+	}
+
 	code := r.URL.Query()["code"][0]
 
 	// Use the authorization code that is pushed to the redirect URL.
