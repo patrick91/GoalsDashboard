@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"google.golang.org/appengine"
+	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
 
 	"golang.org/x/oauth2"
 )
@@ -59,7 +60,7 @@ func fitbitAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	tok, err := fitbitConf.Exchange(ctx, code)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Errorf(ctx, "%v", err)
 	}
 
 	// ideally store the token, but now we are going to make a simple test
@@ -72,7 +73,7 @@ func fitbitAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	res, err := client.Get(url)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Errorf(ctx, "%v", err)
 	}
 
 	defer res.Body.Close()
@@ -102,10 +103,41 @@ type Settings struct {
 }
 
 func settingsHandler(w http.ResponseWriter, r *http.Request) {
-	fibitClientID := "asd"
-	fitbitClientSecret := "asd secret"
+	var data Settings
 
-	data := &Settings{FitbitClientID: fibitClientID, FitbitClientSecret: fitbitClientSecret}
+	ctx := appengine.NewContext(r)
+	key := datastore.NewKey(ctx, "Settings", "main", 0, nil)
+
+	if r.Method == "POST" {
+		fitbitClientID := r.FormValue("fitbit_client_id")
+		fitbitClientSecret := r.FormValue("fitbit_client_secret")
+
+		data = Settings{
+			FitbitClientID:     fitbitClientID,
+			FitbitClientSecret: fitbitClientSecret,
+		}
+
+		_, err := datastore.Put(ctx, key, &data)
+
+		if err != nil {
+			log.Errorf(ctx, "%v", err)
+
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		err := datastore.Get(ctx, key, &data)
+
+		if err != nil {
+
+			if err != datastore.ErrNoSuchEntity {
+				log.Errorf(ctx, "%v", err)
+
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+	}
 
 	settingsFormTemplate.Execute(w, data)
 }
