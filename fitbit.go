@@ -12,7 +12,79 @@ import (
 	"google.golang.org/appengine/log"
 )
 
-func getFitbitConf(ctx context.Context) (*oauth2.Config, error) {
+// Config is a custom oauth2 config that is used to store the token
+// in the datastore
+type Config struct {
+	*oauth2.Config
+}
+
+// StoreToken is called when exchanging the token and saves the token
+// in the datastore
+func (c *Config) StoreToken(ctx context.Context, token *oauth2.Token) error {
+	log.Infof(ctx, "storing the token")
+
+	key := datastore.NewKey(ctx, "Tokens", "fitbit", 0, nil)
+
+	_, err := datastore.Put(ctx, key, token)
+
+	return err
+}
+
+// Exchange is a wrapper around oauth2.config.Exchange and stores the Token
+// in the datastore
+func (c *Config) Exchange(ctx context.Context, code string) (*oauth2.Token, error) {
+	token, err := c.Config.Exchange(ctx, code)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.StoreToken(ctx, token); err != nil {
+		return nil, err
+	}
+
+	return token, nil
+}
+
+// Client creates a new client using our custom TokenSource
+func (c *Config) Client(ctx context.Context, t *oauth2.Token) *http.Client {
+	return oauth2.NewClient(ctx, c.TokenSource(ctx, t))
+}
+
+// TokenSource uses uses our DatastoreTokenSource as the source token
+func (c *Config) TokenSource(ctx context.Context, t *oauth2.Token) oauth2.TokenSource {
+	rts := &DatastoreTokenSource{
+		source: c.Config.TokenSource(ctx, t),
+		config: c,
+		ctx:    ctx,
+	}
+
+	return oauth2.ReuseTokenSource(t, rts)
+}
+
+// DatastoreTokenSource is our custom TokenSource
+type DatastoreTokenSource struct {
+	config *Config
+	source oauth2.TokenSource
+	ctx    context.Context
+}
+
+// Token saves the token in the datastore when it is updated
+func (t *DatastoreTokenSource) Token() (*oauth2.Token, error) {
+	token, err := t.source.Token()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := t.config.StoreToken(t.ctx, token); err != nil {
+		return nil, err
+	}
+
+	return token, nil
+}
+
+func getFitbitConf(ctx context.Context) (*Config, error) {
 	var data Settings
 
 	err := GetSettings(ctx, &data)
@@ -21,13 +93,15 @@ func getFitbitConf(ctx context.Context) (*oauth2.Config, error) {
 		return nil, err
 	}
 
-	var fitbitConf = &oauth2.Config{
-		ClientID:     data.FitbitClientID,
-		ClientSecret: data.FitbitClientSecret,
-		Scopes:       []string{"activity", "weight", "profile"},
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  "https://www.fitbit.com/oauth2/authorize",
-			TokenURL: "https://api.fitbit.com/oauth2/token",
+	var fitbitConf = &Config{
+		Config: &oauth2.Config{
+			ClientID:     data.FitbitClientID,
+			ClientSecret: data.FitbitClientSecret,
+			Scopes:       []string{"activity", "weight", "profile"},
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  "https://www.fitbit.com/oauth2/authorize",
+				TokenURL: "https://api.fitbit.com/oauth2/token",
+			},
 		},
 	}
 
@@ -51,20 +125,6 @@ func FitbitAuthHandler(w http.ResponseWriter, r *http.Request) {
 	url := fitbitConf.AuthCodeURL("state", oauth2.AccessTypeOffline)
 
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
-}
-
-func storeToken(ctx context.Context, token *oauth2.Token) error {
-	key := datastore.NewKey(ctx, "Tokens", "fitbit", 0, nil)
-
-	_, err := datastore.Put(ctx, key, token)
-
-	if err != nil {
-		log.Errorf(ctx, "%v", err)
-
-		return err
-	}
-
-	return nil
 }
 
 func getToken(ctx context.Context, data *oauth2.Token) error {
@@ -93,13 +153,11 @@ func FitbitAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	// NewTransportWithCode will do the handshake to retrieve
 	// an access token and initiate a Transport that is
 	// authorized and authenticated by the retrieved token.
-	tok, err := fitbitConf.Exchange(ctx, code)
+	_, err = fitbitConf.Exchange(ctx, code)
 
 	if err != nil {
 		log.Errorf(ctx, "%v", err)
 	}
-
-	storeToken(ctx, tok)
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
@@ -111,7 +169,7 @@ func GetProfile(w http.ResponseWriter, r *http.Request) {
 	fitbitConf, err := getFitbitConf(ctx)
 
 	if err != nil {
-		fmt.Fprint(w, "Remember to initialise your settings")
+		fmt.Fprintf(w, "Remember to initialise your settings %v", err)
 
 		return
 	}
@@ -124,8 +182,6 @@ func GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: the token is usually updated automatically,
-	// so we need to store the updated one somehow
 	client := fitbitConf.Client(ctx, &token)
 
 	url := "https://api.fitbit.com/1/user/-/profile.json"
