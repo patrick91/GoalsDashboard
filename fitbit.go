@@ -162,29 +162,38 @@ func FitbitAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
-func GetProfile(w http.ResponseWriter, r *http.Request) {
+func getFitbitClient(ctx context.Context) (*http.Client, error) {
 	var token oauth2.Token
-	ctx := appengine.NewContext(r)
 
 	fitbitConf, err := getFitbitConf(ctx)
 
 	if err != nil {
-		fmt.Fprintf(w, "Remember to initialise your settings %v", err)
-
-		return
+		return nil, err
 	}
 
 	err = getToken(ctx, &token)
 
 	if err != nil {
-		fmt.Fprint(w, "Remember to authenticate with fitbit")
-
-		return
+		return nil, err
 	}
 
 	client := fitbitConf.Client(ctx, &token)
 
-	url := "https://api.fitbit.com/1/user/-/profile.json"
+	return client, nil
+}
+
+func GetProfile(w http.ResponseWriter, r *http.Request) {
+	ctx := appengine.NewContext(r)
+
+	client, err := getFitbitClient(ctx)
+
+	if err != nil {
+		fmt.Fprint(w, "Remember to authenticate to fitbit")
+
+		return
+	}
+
+	url := "https://api.fitbit.com/1/user/-/activities/date/2015-12-27.json"
 
 	res, err := client.Get(url)
 
