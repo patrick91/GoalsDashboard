@@ -252,6 +252,8 @@ func getDailyStepGoals(ctx context.Context) (DailyStepGoals, error) {
 
 		output := new(ActivitiesOutput)
 
+		defer res.Body.Close()
+
 		err = json.NewDecoder(res.Body).Decode(output)
 
 		goals.Current = output.Summary.Steps
