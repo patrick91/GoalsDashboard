@@ -1,15 +1,17 @@
 package goals
 
 import (
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"time"
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/memcache"
 )
 
 // Config is a custom oauth2 config that is used to store the token
@@ -182,27 +184,97 @@ func getFitbitClient(ctx context.Context) (*http.Client, error) {
 	return client, nil
 }
 
+type ActivitiesOutput struct {
+	Activities []interface{} `json:"activities"`
+	Goals      struct {
+		ActiveMinutes int     `json:"activeMinutes"`
+		CaloriesOut   int     `json:"caloriesOut"`
+		Distance      float64 `json:"distance"`
+		Floors        int     `json:"floors"`
+		Steps         int     `json:"steps"`
+	} `json:"goals"`
+	Summary struct {
+		ActiveScore      int `json:"activeScore"`
+		ActivityCalories int `json:"activityCalories"`
+		CaloriesBMR      int `json:"caloriesBMR"`
+		CaloriesOut      int `json:"caloriesOut"`
+		Distances        []struct {
+			Activity string  `json:"activity"`
+			Distance float64 `json:"distance"`
+		} `json:"distances"`
+		Elevation            float64 `json:"elevation"`
+		FairlyActiveMinutes  int     `json:"fairlyActiveMinutes"`
+		Floors               int     `json:"floors"`
+		LightlyActiveMinutes int     `json:"lightlyActiveMinutes"`
+		MarginalCalories     int     `json:"marginalCalories"`
+		SedentaryMinutes     int     `json:"sedentaryMinutes"`
+		Steps                int     `json:"steps"`
+		VeryActiveMinutes    int     `json:"veryActiveMinutes"`
+	} `json:"summary"`
+}
+
+var key = "dailyGoals"
+
+type DailyStepGoals struct {
+	Current int `json:"current"`
+	Goal    int `json:"goal"`
+}
+
+func storeDailyGoals(ctx context.Context, goals DailyStepGoals) {
+	duration, _ := time.ParseDuration("10s")
+
+	item := &memcache.Item{
+		Key:        key,
+		Object:     goals,
+		Expiration: duration,
+	}
+
+	memcache.Gob.Set(ctx, item)
+}
+
+func getDailyStepGoals(ctx context.Context) (DailyStepGoals, error) {
+	goals := DailyStepGoals{}
+
+	if _, err := memcache.Gob.Get(ctx, key, &goals); err == memcache.ErrCacheMiss {
+		url := "https://api.fitbit.com/1/user/-/activities/date/2015-12-27.json"
+
+		client, err := getFitbitClient(ctx)
+
+		if err != nil {
+			return goals, err
+		}
+
+		res, err := client.Get(url)
+
+		if err != nil {
+			log.Errorf(ctx, "%v", err)
+		}
+
+		output := new(ActivitiesOutput)
+
+		err = json.NewDecoder(res.Body).Decode(output)
+
+		goals.Current = output.Summary.Steps
+		goals.Goal = output.Goals.Steps
+
+		storeDailyGoals(ctx, goals)
+	} else if err != nil {
+		log.Errorf(ctx, "error getting item: %v", err)
+
+		return goals, err
+	} else {
+		// TODO: get goals from memcache
+	}
+
+	return goals, nil
+}
+
 func GetProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := appengine.NewContext(r)
 
-	client, err := getFitbitClient(ctx)
+	goals, _ := getDailyStepGoals(ctx)
 
-	if err != nil {
-		fmt.Fprint(w, "Remember to authenticate to fitbit")
+	b, _ := json.Marshal(goals)
 
-		return
-	}
-
-	url := "https://api.fitbit.com/1/user/-/activities/date/2015-12-27.json"
-
-	res, err := client.Get(url)
-
-	if err != nil {
-		log.Errorf(ctx, "%v", err)
-	}
-
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-
-	fmt.Fprintf(w, "%s", body)
+	fmt.Fprintf(w, "%s", b)
 }
