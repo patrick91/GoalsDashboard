@@ -236,7 +236,12 @@ func getDailyStepGoals(ctx context.Context) (DailyStepGoals, error) {
 	goals := DailyStepGoals{}
 
 	if _, err := memcache.Gob.Get(ctx, key, &goals); err == memcache.ErrCacheMiss {
-		url := "https://api.fitbit.com/1/user/-/activities/date/2015-12-27.json"
+		t := time.Now()
+
+		url := fmt.Sprintf(
+			"https://api.fitbit.com/1/user/-/activities/date/%d-%d-%d.json",
+			t.Year(), t.Month(), t.Day(),
+		)
 
 		client, err := getFitbitClient(ctx)
 
