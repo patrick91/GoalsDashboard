@@ -262,8 +262,6 @@ func getDailyStepGoals(ctx context.Context) (DailyStepGoals, error) {
 		log.Errorf(ctx, "error getting item: %v", err)
 
 		return goals, err
-	} else {
-		// TODO: get goals from memcache
 	}
 
 	return goals, nil
