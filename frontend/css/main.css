@@ -1,5 +1,68 @@
 @import 'config/*.css';
 
+* {
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+}
+
+html {
+    font-size: 10px;
+}
+
 body {
-    background: $blue;
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+}
+
+body::after {
+    content: '';
+    display: block;
+    margin: 2.4rem 3rem;
+    border: 2rem solid $blue;
+
+    position: absolute;
+
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 11;
+}
+
+#background, #background::before, #background::after {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+#background {
+    background: url('../images/backgrounds/steps.jpg') no-repeat center center;
+}
+
+#background::before {
+    content: '';
+    background-color: $blue;
+    opacity: 0.7;
+
+    mix-blend-mode: lighten;
+}
+#background::after {
+    content: '';
+    background-color: white;
+    opacity: 0.7;
+}
+
+#app {
+    position: relative;
+    z-index: 10;
 }
