@@ -85,6 +85,7 @@ module.exports = function(options) {
                         files.forEach(this.addDependency);
                     }.bind(this)
                 }),
+                require('postcss-simple-vars')(),
                 require('autoprefixer')({
                     browsers: ['last 2 versions']
                 }),
