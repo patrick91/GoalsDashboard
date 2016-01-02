@@ -19,6 +19,9 @@ body {
 
     align-items: center;
     justify-content: center;
+
+    font-family: $font;
+    font-weight: 800;
 }
 
 body::after {
