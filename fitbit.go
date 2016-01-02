@@ -273,13 +273,3 @@ func getDailyStepGoals(ctx context.Context) (DailyStepGoals, error) {
 
 	return goals, nil
 }
-
-func GetProfile(w http.ResponseWriter, r *http.Request) {
-	ctx := appengine.NewContext(r)
-
-	goals, _ := getDailyStepGoals(ctx)
-
-	b, _ := json.Marshal(goals)
-
-	fmt.Fprintf(w, "%s", b)
-}
