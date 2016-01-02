@@ -4,6 +4,14 @@ runtime: go
 api_version: go1
 
 handlers:
+- url: /
+  static_files: frontend/build/index.html
+  upload: frontend/build/index.html
+
+- url: /(.*\.(css|gif|png|jpg|ico|js|html))
+  static_files: frontend/build/\1
+  upload: frontend/build/(.*\.(css|gif|png|jpg|ico|js|html))
+
 - url: /admin/.*
   script: _go_app
   login: admin
