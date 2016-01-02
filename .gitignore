@@ -33,3 +33,7 @@ _testmain.go
 # Google App Engine generated folder
 appengine-generated/
 
+# Frontend stuff
+
+build/
+node_modules/
