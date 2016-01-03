@@ -12,9 +12,9 @@ const openSansObserver = new FontFaceObserver('Source Sans Pro', {});
 
 // When Open Sans is loaded, add the js-open-sans-loaded class to the body
 openSansObserver.check().then(() => {
-  document.body.classList.add('js-source-sans-pro-loaded');
+    document.body.classList.add('js-source-sans-pro-loaded');
 }, () => {
-  document.body.classList.remove('js-source-sans-pro-loaded');
+    document.body.classList.remove('js-source-sans-pro-loaded');
 });
 
 
