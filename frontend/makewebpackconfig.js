@@ -86,6 +86,10 @@ module.exports = function(options) {
                     }.bind(this)
                 }),
                 require('postcss-simple-vars')(),
+                require('postcss-assets')({
+                    loadPaths: ['images/']
+                }),
+                require('./plugins/ratio.js')(),
                 require('autoprefixer')({
                     browsers: ['last 2 versions']
                 }),

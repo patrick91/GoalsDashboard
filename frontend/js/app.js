@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom';
 
 import FontFaceObserver from 'fontfaceobserver';
 
+import Steps from './components/Steps';
+
 
 import '../css/main.css';
 
@@ -19,6 +21,6 @@ openSansObserver.check().then(() => {
 
 
 ReactDOM.render(
-    <h1>Hello Goals</h1>,
+    <Steps />,
     document.querySelector('#app')
 );

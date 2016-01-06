@@ -37,3 +37,7 @@ appengine-generated/
 
 build/
 node_modules/
+.tern-project
+npm-debug.log
+.python-version
+

@@ -1,0 +1,42 @@
+.steps {
+    font-weight: normal;
+    text-align: center;
+
+    font-size: 15vw;
+    letter-spacing: -0.04em;
+    color: $blue;
+
+    position: absolute;
+    top: 60px;
+    bottom: 60px;
+    width: 100%;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+    flex-direction: column;
+}
+
+
+.steps__current--goal-reached {
+    background: resolve('icons/balloons.svg') no-repeat;
+    background-size: contain;
+
+    width: 15vw;
+    margin: -7vw auto 0;
+    position: relative;
+    z-index: 10;
+    mix-blend-mode: multiply;
+}
+
+.steps__current--goal-reached::after {
+    content: '';
+    display: block;
+    ratio: width('icons/balloons.svg') height('icons/balloons.svg');
+}
+
+.steps__caption {
+    font-size: 3vw;
+    letter-spacing: 0;
+}
