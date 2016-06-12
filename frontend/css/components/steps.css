@@ -20,7 +20,7 @@
 
 
 .steps__current--goal-reached {
-    background: resolve('icons/balloons.svg') no-repeat;
+    background: url('../images/icons/balloons.svg') no-repeat;
     background-size: contain;
 
     width: 15vw;

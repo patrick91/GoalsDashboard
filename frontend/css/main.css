@@ -45,7 +45,7 @@ body::after {
 }
 
 #background {
-    background: resolve('backgrounds/steps.jpg') no-repeat center center;
+    background: url('../images/backgrounds/steps.jpg') no-repeat center center;
     background-size: cover;
 }
 

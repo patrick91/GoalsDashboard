@@ -12,7 +12,9 @@ module.exports = function(options) {
             path.resolve(__dirname, 'js/app.js') // Start with js/app.js...
         ];
 
-        cssLoaders = ExtractTextPlugin.extract('style-loader', 'css-loader!postcss-loader');
+        cssLoaders = ExtractTextPlugin.extract('style-loader', 'css-loader!postcss-loader', {
+            publicPath: '/'
+        });
 
         plugins = [
             new webpack.optimize.UglifyJsPlugin(),
@@ -72,8 +74,8 @@ module.exports = function(options) {
                 test: /\.css$/,
                 loader: cssLoaders
             }, {
-                test: /\.jpe?g$|\.gif$|\.png$/i,
-                loader: "url-loader?limit=10000"
+                test: /\.jpe?g$|\.gif$|\.png$|\.svg$/i,
+                loader: "file-loader"
             }
         ]},
         plugins: plugins,
@@ -86,9 +88,6 @@ module.exports = function(options) {
                     }.bind(this)
                 }),
                 require('postcss-simple-vars')(),
-                require('postcss-assets')({
-                    loadPaths: ['images/']
-                }),
                 require('./plugins/ratio.js')(),
                 require('autoprefixer')({
                     browsers: ['last 2 versions']
